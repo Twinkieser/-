@@ -22,8 +22,10 @@ public class UpdateTicketRequest {
     private Priority priority;
 
     private Long assigneeId;
+    private Boolean clearAssignee = false;
 
     private LocalDate dueDate;
+    private Boolean clearDueDate = false;
 
     public UpdateTicketRequest() {}
 
@@ -48,6 +50,12 @@ public class UpdateTicketRequest {
     public Long getAssigneeId() { return assigneeId; }
     public void setAssigneeId(Long assigneeId) { this.assigneeId = assigneeId; }
 
+    public Boolean getClearAssignee() { return clearAssignee; }
+    public void setClearAssignee(Boolean clearAssignee) { this.clearAssignee = clearAssignee; }
+
     public LocalDate getDueDate() { return dueDate; }
     public void setDueDate(LocalDate dueDate) { this.dueDate = dueDate; }
+
+    public Boolean getClearDueDate() { return clearDueDate; }
+    public void setClearDueDate(Boolean clearDueDate) { this.clearDueDate = clearDueDate; }
 }

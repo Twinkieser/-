@@ -35,6 +35,10 @@ public class TicketController {
         this.authService = authService;
     }
 
+    private static final java.util.Set<String> ALLOWED_SORT_FIELDS = java.util.Set.of(
+            "createdAt", "number", "dueDate", "priority", "status"
+    );
+
     @GetMapping
     @Operation(summary = "Список заявок с фильтрами, поиском и пагинацией")
     public ResponseEntity<Page<TicketDto>> getTickets(
@@ -49,8 +53,23 @@ public class TicketController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(defaultValue = "createdAt,desc") String sort) {
 
+        if (size > 100) {
+            throw new com.clientdesk.exception.BadRequestException("Параметр size не может превышать 100");
+        }
+        if (size < 1) {
+            throw new com.clientdesk.exception.BadRequestException("Параметр size должен быть не менее 1");
+        }
+        if (page < 0) {
+            throw new com.clientdesk.exception.BadRequestException("Параметр page не может быть отрицательным");
+        }
+
         String[] sortParts = sort.split(",");
-        String sortField = sortParts[0];
+        String sortField = sortParts[0].trim();
+        if (!ALLOWED_SORT_FIELDS.contains(sortField)) {
+            throw new com.clientdesk.exception.BadRequestException(
+                    "Сортировка по полю '" + sortField + "' не поддерживается. Разрешенные поля: " + ALLOWED_SORT_FIELDS);
+        }
+
         Sort.Direction direction = sortParts.length > 1 && sortParts[1].equalsIgnoreCase("asc") ?
                 Sort.Direction.ASC : Sort.Direction.DESC;
 

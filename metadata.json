@@ -1,6 +1,0 @@
-{
-  "name": "ClientDesk CRM & Ticket System",
-  "description": "Система учёта и обработки клиентских заявок: управление клиентами, жизненный цикл заявок, контроль сроков, роли менеджера и исполнителя, отчёты и аудит.",
-  "requestFramePermissions": [],
-  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
-}

@@ -36,4 +36,7 @@ public interface TicketRepository extends JpaRepository<Ticket, Long>, JpaSpecif
 
     @Query("SELECT t FROM Ticket t WHERE t.createdAt >= :startDate AND t.createdAt <= :endDate")
     List<Ticket> findTicketsInPeriod(@Param("startDate") OffsetDateTime startDate, @Param("endDate") OffsetDateTime endDate);
+
+    @Query(value = "SELECT nextval('ticket_number_seq')", nativeQuery = true)
+    Long getNextTicketNumber();
 }

@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Layers, ShieldCheck, UserCheck, Lock, User, AlertCircle } from 'lucide-react';
+import { Layers, ShieldCheck, Lock, User, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin123');
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -25,12 +25,6 @@ export const LoginPage: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  };
-
-  const handleQuickLogin = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-    login(u, p).catch(err => setError(err.message));
   };
 
   return (
@@ -74,6 +68,7 @@ export const LoginPage: React.FC = () => {
                 <User className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="text"
+                  name="login"
                   required
                   value={username}
                   onChange={e => setUsername(e.target.value)}
@@ -91,6 +86,7 @@ export const LoginPage: React.FC = () => {
                 <Lock className="w-4 h-4 absolute left-3 top-3 text-slate-400" />
                 <input
                   type="password"
+                  name="password"
                   required
                   value={password}
                   onChange={e => setPassword(e.target.value)}
@@ -108,56 +104,6 @@ export const LoginPage: React.FC = () => {
               {loading ? 'Авторизация...' : 'Войти в систему'}
             </button>
           </form>
-
-          {/* Quick Demo Accounts */}
-          <div className="mt-8 pt-6 border-t border-slate-700/60">
-            <p className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2.5 text-center">
-              Быстрый вход для проверки:
-            </p>
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('admin', 'admin123')}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-200 flex items-center justify-between group transition"
-              >
-                <div>
-                  <span className="font-semibold text-indigo-400">👨‍💼 Менеджер</span>: admin
-                  <p className="text-[10px] text-slate-400">Клиенты, назначение, закрытие, отчёты</p>
-                </div>
-                <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">
-                  admin123
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('ivan', 'ivan123')}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-200 flex items-center justify-between group transition"
-              >
-                <div>
-                  <span className="font-semibold text-emerald-400">👨‍🔧 Исполнитель</span>: ivan
-                  <p className="text-[10px] text-slate-400">Назначенные заявки, работа, результат</p>
-                </div>
-                <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">
-                  ivan123
-                </span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickLogin('anna', 'anna123')}
-                className="w-full text-left p-2.5 rounded-xl bg-slate-800/60 hover:bg-slate-800 border border-slate-700/60 text-xs text-slate-200 flex items-center justify-between group transition"
-              >
-                <div>
-                  <span className="font-semibold text-amber-400">👩‍💻 Исполнитель</span>: anna
-                  <p className="text-[10px] text-slate-400">Назначенные заявки, передача на проверку</p>
-                </div>
-                <span className="text-[10px] bg-slate-700 px-2 py-0.5 rounded text-slate-300">
-                  anna123
-                </span>
-              </button>
-            </div>
-          </div>
         </div>
 
         {/* Security badge footer */}

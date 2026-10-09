@@ -66,6 +66,8 @@ public class TicketService {
             } else if (assigneeId != null) {
                 predicates.add(cb.equal(root.get("assignee").get("id"), assigneeId));
             }
+
+            if (search != null && !search.isBlank()) {
                 String pattern = "%" + search.trim().toLowerCase() + "%";
                 var searchPredicates = new ArrayList<jakarta.persistence.criteria.Predicate>();
 
@@ -86,10 +88,6 @@ public class TicketService {
 
             if (status != null) {
                 predicates.add(cb.equal(root.get("status"), status));
-            }
-
-            if (assigneeId != null) {
-                predicates.add(cb.equal(root.get("assignee").get("id"), assigneeId));
             }
 
             if (priority != null) {
@@ -162,22 +160,25 @@ public class TicketService {
 
         if (request.getServiceTypeId() != null) {
             ServiceType st = serviceTypeRepository.findById(request.getServiceTypeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Вид услуги не найден"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Вид услуги не найден с id: " + request.getServiceTypeId()));
             ticket.setServiceType(st);
         }
 
         if (request.getAssigneeId() != null) {
             User assignee = userRepository.findById(request.getAssigneeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Исполнитель не найден"));
+                    .orElseThrow(() -> new BadRequestException("Исполнитель не найден с id: " + request.getAssigneeId()));
+            if (!assignee.isActive()) {
+                throw new BadRequestException("Нельзя назначить отключенного сотрудника");
+            }
+            if (assignee.getRole() != Role.EXECUTOR) {
+                throw new BadRequestException("Исполнителем может быть назначен только сотрудник с ролью EXECUTOR");
+            }
             ticket.setAssignee(assignee);
         }
 
-        // Generate ticket number from max or sequence
-        Long maxNumber = ticketRepository.findAll().stream()
-                .map(Ticket::getNumber)
-                .max(Long::compareTo)
-                .orElse(1000L);
-        ticket.setNumber(maxNumber + 1);
+        // Use database sequence nextval instead of loading all tickets
+        Long ticketNumber = ticketRepository.getNextTicketNumber();
+        ticket.setNumber(ticketNumber);
 
         Ticket saved = ticketRepository.save(ticket);
 
@@ -208,7 +209,7 @@ public class TicketService {
 
         if (request.getClientId() != null && !request.getClientId().equals(ticket.getClient().getId())) {
             Client newClient = clientRepository.findById(request.getClientId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Клиент не найден"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Клиент не найден с id: " + request.getClientId()));
             historyRepository.save(new TicketHistory(ticket, currentUser, "CLIENT_CHANGED",
                     ticket.getClient().getName(), newClient.getName()));
             ticket.setClient(newClient);
@@ -228,7 +229,7 @@ public class TicketService {
 
         if (request.getServiceTypeId() != null) {
             ServiceType st = serviceTypeRepository.findById(request.getServiceTypeId())
-                    .orElseThrow(() -> new ResourceNotFoundException("Вид услуги не найден"));
+                    .orElseThrow(() -> new ResourceNotFoundException("Вид услуги не найден с id: " + request.getServiceTypeId()));
             ticket.setServiceType(st);
         }
 
@@ -238,18 +239,38 @@ public class TicketService {
             ticket.setPriority(request.getPriority());
         }
 
-        if (request.getDueDate() != null && !request.getDueDate().equals(ticket.getDueDate())) {
+        // Support clearing or updating due date
+        if (Boolean.TRUE.equals(request.getClearDueDate())) {
+            if (ticket.getDueDate() != null) {
+                historyRepository.save(new TicketHistory(ticket, currentUser, "DUE_DATE_CHANGED",
+                        ticket.getDueDate().toString(), "Сброшен"));
+                ticket.setDueDate(null);
+            }
+        } else if (request.getDueDate() != null && !request.getDueDate().equals(ticket.getDueDate())) {
             historyRepository.save(new TicketHistory(ticket, currentUser, "DUE_DATE_CHANGED",
                     ticket.getDueDate() != null ? ticket.getDueDate().toString() : "Не установлен",
                     request.getDueDate().toString()));
             ticket.setDueDate(request.getDueDate());
         }
 
-        if (request.getAssigneeId() != null) {
+        // Support clearing or assigning executor with validation
+        if (Boolean.TRUE.equals(request.getClearAssignee())) {
+            if (ticket.getAssignee() != null) {
+                historyRepository.save(new TicketHistory(ticket, currentUser, "ASSIGNED",
+                        ticket.getAssignee().getFullName(), "Не назначен"));
+                ticket.setAssignee(null);
+            }
+        } else if (request.getAssigneeId() != null) {
+            User newAssignee = userRepository.findById(request.getAssigneeId())
+                    .orElseThrow(() -> new BadRequestException("Исполнитель не найден с id: " + request.getAssigneeId()));
+            if (!newAssignee.isActive()) {
+                throw new BadRequestException("Нельзя назначить отключенного сотрудника");
+            }
+            if (newAssignee.getRole() != Role.EXECUTOR) {
+                throw new BadRequestException("Исполнителем может быть назначен только сотрудник с ролью EXECUTOR");
+            }
             Long currentAssigneeId = ticket.getAssignee() != null ? ticket.getAssignee().getId() : null;
-            if (!request.getAssigneeId().equals(currentAssigneeId)) {
-                User newAssignee = userRepository.findById(request.getAssigneeId())
-                        .orElseThrow(() -> new ResourceNotFoundException("Исполнитель не найден"));
+            if (!newAssignee.getId().equals(currentAssigneeId)) {
                 historyRepository.save(new TicketHistory(ticket, currentUser, "ASSIGNED",
                         ticket.getAssignee() != null ? ticket.getAssignee().getFullName() : "Не назначен",
                         newAssignee.getFullName()));
@@ -283,6 +304,7 @@ public class TicketService {
                 throw new AccessDeniedCustomException("Только менеджер может закрывать заявки (статус CLOSED)");
             }
 
+            // While in ON_REVIEW, executor cannot tamper with status
             if (currentStatus == TicketStatus.ON_REVIEW) {
                 throw new AccessDeniedCustomException("Заявка находится на проверке: возврат на доработку или закрытие выполняет только менеджер");
             }
@@ -308,6 +330,14 @@ public class TicketService {
         if (targetStatus == TicketStatus.WAITING_CLARIFICATION) {
             if (request.getReason() == null || request.getReason().trim().isBlank()) {
                 throw new BadRequestException("При переводе в статус 'Ожидает уточнения' указание причины обязательно");
+            }
+        }
+
+        // Moving to ON_REVIEW requires non-empty result
+        if (targetStatus == TicketStatus.ON_REVIEW) {
+            String resText = request.getResult();
+            if ((resText == null || resText.trim().isBlank()) && (ticket.getResult() == null || ticket.getResult().trim().isBlank())) {
+                throw new BadRequestException("При передаче заявки на проверку указание результата работы обязательно");
             }
         }
 
@@ -352,6 +382,10 @@ public class TicketService {
     public TicketCommentDto addComment(Long ticketId, CreateCommentRequest request, User currentUser) {
         Ticket ticket = ticketRepository.findById(ticketId)
                 .orElseThrow(() -> new ResourceNotFoundException("Заявка не найдена с id: " + ticketId));
+
+        if (ticket.getStatus() == TicketStatus.CLOSED) {
+            throw new InvalidStatusTransitionException("Нельзя добавлять комментарии к закрытой заявке");
+        }
 
         if (currentUser.getRole() == Role.EXECUTOR) {
             if (ticket.getAssignee() == null || !ticket.getAssignee().getId().equals(currentUser.getId())) {

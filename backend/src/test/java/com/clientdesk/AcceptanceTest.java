@@ -42,6 +42,7 @@ public class AcceptanceTest {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
+        registry.add("app.jwt.secret", () -> "test-jwt-secret-key-at-least-32-chars-long-1234567890");
     }
 
     @Autowired

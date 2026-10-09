@@ -1,19 +1,18 @@
 -- ========================================================
 -- V2__seed_data.sql: Demo Data Seeding
 -- 1 Manager, 2 Executors, 5 Clients, 15 Tickets
--- Passwords:
---   admin: admin123
---   ivan: ivan123
---   anna: anna123
--- BCrypt hashes generated with standard cost factor 10
+-- Test users:
+--   admin (пароль: admin123)
+--   ivan (пароль: ivan123)
+--   anna (пароль: anna123)
+-- Хеши сгенерированы BCrypt (cost 10) и проверены через BCrypt.matches
 -- ========================================================
 
 -- Users
--- admin123 -> $2a$10$4n9x5i8z0oP5wYVbC1gQe.7fKx0yF4Q7u2j9mN0pQ8vR1kY2xZ3eK (or standard test hashes)
 INSERT INTO users (id, login, password_hash, full_name, role, active) VALUES
-(1, 'admin', '$2a$10$w09ZkM4P2bK6/b26k88yMeH9z1KkE7v2c0n0E4h8J2u9qZ4a1m9kC', 'Максим Орлов (Менеджер)', 'MANAGER', TRUE),
-(2, 'ivan', '$2a$10$w09ZkM4P2bK6/b26k88yMeH9z1KkE7v2c0n0E4h8J2u9qZ4a1m9kC', 'Иван Смирнов (Инженер)', 'EXECUTOR', TRUE),
-(3, 'anna', '$2a$10$w09ZkM4P2bK6/b26k88yMeH9z1KkE7v2c0n0E4h8J2u9qZ4a1m9kC', 'Анна Кузнецова (Специалист)', 'EXECUTOR', TRUE);
+(1, 'admin', '$2a$10$Y1.OuIicLHCsCTaJgn.0xulZp1ZCZd0EIZX5UCIHB8/54VLhcI9Ry', 'Максим Орлов (Менеджер)', 'MANAGER', TRUE),
+(2, 'ivan', '$2a$10$p7uE/YI29ORMHupyNscIZ.f96suEwpjo4spi5FiYUz85y0D1ESQci', 'Иван Смирнов (Инженер)', 'EXECUTOR', TRUE),
+(3, 'anna', '$2a$10$TAqOSj5fhQEbeYyo4YhDsO3H8vA6MlUnc.LuAaC09UqlRsED..wVe', 'Анна Кузнецова (Специалист)', 'EXECUTOR', TRUE);
 
 SELECT setval('users_id_seq', (SELECT MAX(id) FROM users));
 
