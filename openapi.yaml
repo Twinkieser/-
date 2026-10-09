@@ -1,0 +1,136 @@
+openapi: 3.0.3
+info:
+  title: ClientDesk API
+  description: REST API веб-системы учёта и обработки клиентских заявок
+  version: 1.0.0
+servers:
+  - url: /api
+    description: Current Server
+paths:
+  /auth/login:
+    post:
+      summary: Вход по логину и паролю
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [login, password]
+              properties:
+                login: { type: string, example: "admin" }
+                password: { type: string, example: "admin123" }
+      responses:
+        '200':
+          description: Успешный вход с JWT токеном
+        '401':
+          description: Неверный логин или пароль
+  /auth/me:
+    get:
+      summary: Профиль текущего пользователя
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: Данные текущего пользователя
+  /tickets:
+    get:
+      summary: Список заявок с фильтрами и пагинацией
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: status
+          in: query
+          schema: { type: string, enum: [NEW, IN_PROGRESS, WAITING_CLARIFICATION, ON_REVIEW, CLOSED] }
+        - name: priority
+          in: query
+          schema: { type: string, enum: [LOW, MEDIUM, HIGH] }
+        - name: overdue
+          in: query
+          schema: { type: boolean }
+      responses:
+        '200': { description: Список заявок }
+    post:
+      summary: Создание новой заявки (MANAGER)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Заявка создана }
+        '403': { description: Доступ запрещен для EXECUTOR }
+  /tickets/{id}:
+    get:
+      summary: Карточка заявки с комментариями и историей
+      security: [{ bearerAuth: [] }]
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        '200': { description: Детали заявки }
+    put:
+      summary: Обновление параметров заявки (MANAGER)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Заявка обновлена }
+  /tickets/{id}/status:
+    patch:
+      summary: Смена статуса заявки
+      security: [{ bearerAuth: [] }]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetStatus]
+              properties:
+                targetStatus: { type: string }
+                reason: { type: string }
+                result: { type: string }
+      responses:
+        '200': { description: Статус успешно изменен }
+        '409': { description: Недопустимый переход статуса }
+        '403': { description: Нет прав на данный статус }
+  /tickets/{id}/comments:
+    post:
+      summary: Добавление комментария
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Комментарий добавлен }
+  /clients:
+    get:
+      summary: Список клиентов
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Список клиентов }
+    post:
+      summary: Создание клиента (MANAGER)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '201': { description: Клиент создан }
+  /reports/dashboard:
+    get:
+      summary: Сводка для дашборда
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Статистика }
+  /reports/summary:
+    get:
+      summary: Аналитический отчет за период (MANAGER)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200': { description: Данные отчета }
+  /reports/export-csv:
+    get:
+      summary: Экспорт отчета в CSV (MANAGER)
+      security: [{ bearerAuth: [] }]
+      responses:
+        '200':
+          description: CSV файл
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

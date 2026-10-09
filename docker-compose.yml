@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: clientdesk-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-clientdesk}
+      POSTGRES_USER: ${POSTGRES_USER:-clientdesk_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-clientdesk_secret_2026}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./backend/src/main/resources/db/migration:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-clientdesk_user} -d ${POSTGRES_DB:-clientdesk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - clientdesk-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: clientdesk-backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB:-clientdesk}
+      DB_USER: ${POSTGRES_USER:-clientdesk_user}
+      DB_PASSWORD: ${POSTGRES_PASSWORD:-clientdesk_secret_2026}
+      JWT_SECRET: ${JWT_SECRET:-9a8b7c6d5e4f3a2b1c0d9e8f7a6b5c4d3e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b}
+      JWT_EXPIRATION_MS: ${JWT_EXPIRATION_MS:-86400000}
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - backend-logs:/app/logs
+    networks:
+      - clientdesk-network
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile.frontend
+    container_name: clientdesk-frontend
+    restart: unless-stopped
+    depends_on:
+      - backend
+    ports:
+      - "3000:80"
+    networks:
+      - clientdesk-network
+
+volumes:
+  pgdata:
+    driver: local
+  backend-logs:
+    driver: local
+
+networks:
+  clientdesk-network:
+    driver: bridge

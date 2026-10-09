@@ -1,0 +1,185 @@
+{
+  "info": {
+    "name": "ClientDesk API Collection",
+    "description": "Postman коллекция для проверки всех эндпоинтов и контрольного сценария ClientDesk",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080/api" },
+    { "key": "managerToken", "value": "" },
+    { "key": "executorToken", "value": "" },
+    { "key": "testClientId", "value": "1" },
+    { "key": "testTicketId", "value": "1" }
+  ],
+  "item": [
+    {
+      "name": "01. Auth - Login Manager",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"admin\",\n  \"password\": \"admin123\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "02. Auth - Login Executor",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"login\": \"ivan\",\n  \"password\": \"ivan123\"\n}"
+        },
+        "url": "{{baseUrl}}/auth/login"
+      }
+    },
+    {
+      "name": "03. Dashboard Stats",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": "{{baseUrl}}/reports/dashboard"
+      }
+    },
+    {
+      "name": "04. Clients - List",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": "{{baseUrl}}/clients"
+      }
+    },
+    {
+      "name": "05. Clients - Create (MANAGER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"ООО СпецМонтаж\",\n  \"contactPerson\": \"Дмитрий\",\n  \"phone\": \"+7 999 111-22-33\",\n  \"email\": \"info@specmontazh.ru\"\n}"
+        },
+        "url": "{{baseUrl}}/clients"
+      }
+    },
+    {
+      "name": "06. Tickets - List with filters",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": "{{baseUrl}}/tickets?page=0&size=10"
+      }
+    },
+    {
+      "name": "07. Tickets - Create (MANAGER)",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"clientId\": 1,\n  \"subject\": \"Интеграция шлюза оплаты\",\n  \"description\": \"Подключить эквайринг\",\n  \"priority\": \"HIGH\",\n  \"serviceTypeId\": 1,\n  \"assigneeId\": 2,\n  \"dueDate\": \"2026-10-15\"\n}"
+        },
+        "url": "{{baseUrl}}/tickets"
+      }
+    },
+    {
+      "name": "08. Tickets - Executor Accept to IN_PROGRESS",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{executorToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetStatus\": \"IN_PROGRESS\"\n}"
+        },
+        "url": "{{baseUrl}}/tickets/{{testTicketId}}/status"
+      }
+    },
+    {
+      "name": "09. Tickets - Submit for Review",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{executorToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetStatus\": \"ON_REVIEW\",\n  \"result\": \"Все работы выполнены и протестированы\"\n}"
+        },
+        "url": "{{baseUrl}}/tickets/{{testTicketId}}/status"
+      }
+    },
+    {
+      "name": "10. Tickets - Manager Close",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetStatus\": \"CLOSED\"\n}"
+        },
+        "url": "{{baseUrl}}/tickets/{{testTicketId}}/status"
+      }
+    },
+    {
+      "name": "11. Negative - Executor Close Attempt (Expect 403)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{executorToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetStatus\": \"CLOSED\"\n}"
+        },
+        "url": "{{baseUrl}}/tickets/{{testTicketId}}/status"
+      }
+    },
+    {
+      "name": "12. Negative - Illegal Transition (Expect 409)",
+      "request": {
+        "method": "PATCH",
+        "header": [
+          { "key": "Authorization", "value": "Bearer {{managerToken}}" },
+          { "key": "Content-Type", "value": "application/json" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"targetStatus\": \"ON_REVIEW\"\n}"
+        },
+        "url": "{{baseUrl}}/tickets/{{testTicketId}}/status"
+      }
+    },
+    {
+      "name": "13. Reports - Summary for period",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": "{{baseUrl}}/reports/summary"
+      }
+    },
+    {
+      "name": "14. Reports - Export CSV",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{managerToken}}" }],
+        "url": "{{baseUrl}}/reports/export-csv"
+      }
+    }
+  ]
+}
